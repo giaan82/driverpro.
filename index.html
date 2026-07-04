@@ -1,0 +1,1709 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DriverPro - Hệ thống giám sát & quản lý tài xế thông minh</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Chart.js for analytics -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Leaflet Map CSS & JS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <!-- Custom Tailwind Configuration -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#f0f7ff',
+                            100: '#e0effe',
+                            200: '#bae0fd',
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                            700: '#1d4ed8',
+                            800: '#1e40af',
+                            900: '#1e3a8a',
+                            dark: '#0f172a'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #3b82f6;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #1d4ed8;
+        }
+        
+        /* GPS Live Pulse Animation */
+        .gps-pulse-active {
+            position: relative;
+        }
+        .gps-pulse-active::after {
+            content: '';
+            position: absolute;
+            width: 14px;
+            height: 14px;
+            background: #10b981;
+            border-radius: 50%;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            animation: pulse-ring 1.8s cubic-bezier(0.215, 0.610, 0.355, 1) infinite;
+        }
+        @keyframes pulse-ring {
+            0% { transform: translate(-50%, -50%) scale(0.6); opacity: 0.9; }
+            100% { transform: translate(-50%, -50%) scale(2.8); opacity: 0; }
+        }
+
+        /* Map styling */
+        .map-container {
+            height: 520px;
+            width: 100%;
+            border-radius: 1rem;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+        }
+
+        /* Leaflet Marker Styling */
+        .custom-div-icon {
+            background: none;
+            border: none;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans min-h-screen flex flex-col antialiased">
+
+<div id="login-screen" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950 overflow-y-auto py-8">
+    <!-- Animated particle grid overlay -->
+    <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-blue-900/40 via-slate-950 to-slate-950 z-0"></div>
+    <div class="absolute inset-0 opacity-10 bg-[linear-gradient(to_right,#808080_1px,transparent_1px),linear-gradient(to_bottom,#808080_1px,transparent_1px)] bg-[size:30px_30px] z-0"></div>
+    
+    <!-- Moving Radar Grid Effect -->
+    <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[650px] h-[650px] rounded-full border border-blue-500/10 animate-[spin_30s_linear_infinite] z-0 pointer-events-none">
+        <div class="absolute top-0 left-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-blue-500 shadow-[0_0_15px_#3b82f6]"></div>
+        <div class="absolute top-1/2 right-0 -translate-y-1/2 w-3.5 h-3.5 rounded-full bg-emerald-500 shadow-[0_0_12px_#10b981]"></div>
+    </div>
+
+    <!-- Login Form Card -->
+    <div class="relative w-full max-w-md p-8 m-4 bg-slate-900/80 backdrop-blur-xl rounded-2xl border border-slate-800 shadow-2xl z-10 transition-all duration-300">
+        <!-- Logo Header -->
+        <div class="flex flex-col items-center text-center mb-6">
+            <div class="w-16 h-16 bg-gradient-to-tr from-brand-600 to-cyan-400 rounded-2xl flex items-center justify-center shadow-lg shadow-brand-500/20 mb-4">
+                <svg class="w-10 h-10 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10h10z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M13 8h7l2 3v5h-9V8z" />
+                    <circle cx="12" cy="11" r="2.5" fill="#f59e0b" />
+                </svg>
+            </div>
+            <h1 class="text-2xl font-extrabold tracking-tight text-white">Driver<span class="text-brand-500">Pro</span></h1>
+            <p class="text-slate-400 text-xs mt-1 uppercase tracking-widest font-semibold">Hệ Thống Giám Sát Tài Xế Thông Minh</p>
+        </div>
+
+        <!-- Role Selector Switch Tabs -->
+        <div class="grid grid-cols-2 p-1 mb-6 bg-slate-950/60 border border-slate-800 rounded-xl relative z-20">
+            <button type="button" id="tab-admin-btn" onclick="toggleLoginRole('admin')"
+                class="py-2.5 text-xs font-bold uppercase tracking-wider rounded-lg transition-all duration-200 text-white bg-brand-600 shadow-lg">
+                <i class="fa-solid fa-user-shield mr-1.5"></i> Quản trị viên
+            </button>
+            <button type="button" id="tab-staff-btn" onclick="toggleLoginRole('staff')"
+                class="py-2.5 text-xs font-bold uppercase tracking-wider rounded-lg transition-all duration-200 text-slate-400 hover:text-white">
+                <i class="fa-solid fa-id-card-clip mr-1.5"></i> Nhân viên / Tài xế
+            </button>
+        </div>
+
+        <!-- Credentials Feedback Message -->
+        <div id="login-error-msg" class="hidden mb-4 p-3 bg-rose-500/10 border border-rose-500/20 rounded-lg text-rose-400 text-xs text-center">
+            <i class="fa-solid fa-circle-exclamation mr-1.5"></i> <span id="error-text">Tài khoản hoặc mật khẩu không chính xác.</span>
+        </div>
+
+        <!-- ADMIN LOGIN FORM -->
+        <form id="login-form" class="space-y-5">
+            <div>
+                <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Tài khoản quản trị</label>
+                <div class="relative">
+                    <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-500">
+                        <i class="fa-solid fa-user-shield"></i>
+                    </span>
+                    <input type="text" id="login-username" value="giaan@driverpro.vn" required
+                        class="w-full pl-10 pr-4 py-3 bg-slate-950/50 border border-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent text-white placeholder-slate-600 text-sm transition"
+                        placeholder="Nhập tên đăng nhập hoặc Email">
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Mật khẩu bảo mật</label>
+                <div class="relative">
+                    <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-500">
+                        <i class="fa-solid fa-lock"></i>
+                    </span>
+                    <input type="password" id="login-password" value="driverpro2026" required
+                        class="w-full pl-10 pr-4 py-3 bg-slate-950/50 border border-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent text-white placeholder-slate-600 text-sm transition"
+                        placeholder="••••••••">
+                </div>
+            </div>
+
+            <div class="flex items-center justify-between text-xs">
+                <label class="flex items-center text-slate-400 cursor-pointer hover:text-white transition">
+                    <input type="checkbox" checked class="rounded bg-slate-950 border-slate-800 text-brand-600 focus:ring-brand-500 mr-2">
+                    Ghi nhớ tài khoản
+                </label>
+                <button type="button" onclick="showNotification('Tính năng Khôi phục mật khẩu đang gửi yêu cầu tới bộ phận IT!', 'info')" class="text-brand-400 hover:text-brand-300 transition">Quên mật khẩu?</button>
+            </div>
+
+            <button type="submit" 
+                class="w-full py-3 px-4 bg-gradient-to-r from-brand-600 to-blue-700 hover:from-brand-500 hover:to-blue-600 active:scale-[0.98] text-white font-semibold rounded-xl shadow-lg shadow-brand-600/20 focus:outline-none focus:ring-2 focus:ring-brand-500 transition duration-150">
+                <i class="fa-solid fa-right-to-bracket mr-2"></i> Đăng Nhập Quản Trị
+            </button>
+        </form>
+
+        <!-- STAFF & DRIVER LOGIN FORM -->
+        <form id="staff-login-form" class="space-y-5 hidden">
+            <div>
+                <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Mã tài xế / Nhân viên</label>
+                <div class="relative">
+                    <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-500">
+                        <i class="fa-solid fa-id-card"></i>
+                    </span>
+                    <input type="text" id="staff-id" required
+                        class="w-full pl-10 pr-4 py-3 bg-slate-950/50 border border-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent text-white placeholder-slate-600 text-sm transition"
+                        placeholder="Ví dụ: TX-01, TX-12, hoặc TX-99">
+                </div>
+                <p class="text-[10px] text-slate-500 mt-1">Sử dụng tài khoản mẫu từ <span class="text-cyan-400 font-mono">TX-01</span> đến <span class="text-cyan-400 font-mono">TX-100</span></p>
+            </div>
+
+            <div>
+                <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Mật khẩu cá nhân</label>
+                <div class="relative">
+                    <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-500">
+                        <i class="fa-solid fa-lock"></i>
+                    </span>
+                    <input type="password" id="staff-password" value="driverpro123" required
+                        class="w-full pl-10 pr-4 py-3 bg-slate-950/50 border border-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent text-white placeholder-slate-600 text-sm transition"
+                        placeholder="Mặc định: driverpro123">
+                </div>
+            </div>
+
+            <div class="flex items-center justify-between text-xs">
+                <label class="flex items-center text-slate-400 cursor-pointer hover:text-white transition">
+                    <input type="checkbox" checked class="rounded bg-slate-950 border-slate-800 text-brand-600 focus:ring-brand-500 mr-2">
+                    Ghi nhớ ca trực
+                </label>
+                <button type="button" onclick="showNotification('Vui lòng liên hệ phòng nhân sự hoặc Hotline 1900-8888 để được cấp lại mật khẩu!', 'warning')" class="text-cyan-400 hover:text-cyan-300 transition">Quên mã pin/mật khẩu?</button>
+            </div>
+
+            <button type="submit" 
+                class="w-full py-3 px-4 bg-gradient-to-r from-cyan-600 to-emerald-600 hover:from-cyan-500 hover:to-emerald-500 active:scale-[0.98] text-white font-semibold rounded-xl shadow-lg shadow-cyan-600/20 focus:outline-none focus:ring-2 focus:ring-cyan-500 transition duration-150">
+                <i class="fa-solid fa-user-check mr-2"></i> Đăng Nhập Nhân Viên
+            </button>
+        </form>
+
+        <!-- System Assistance Info -->
+        <div class="mt-6 pt-6 border-t border-slate-800/60 text-center text-xs text-slate-500 space-y-1.5">
+            <p><i class="fa-solid fa-shield-halved text-brand-500 mr-1"></i> Phiên đăng nhập được bảo mật bởi SSL 256-bit.</p>
+            <p>Hỗ trợ kỹ thuật doanh nghiệp: <span class="text-slate-400 font-medium">1900-8888</span></p>
+        </div>
+    </div>
+</div>
+
+<!-- MAIN CORE SYSTEM WORKSPACE -->
+<div id="app-workspace" class="hidden flex-1 flex flex-col md:flex-row min-h-screen">
+    
+    <!-- SIDEBAR NAVIGATION -->
+    <aside class="w-full md:w-64 bg-slate-950 text-slate-300 flex flex-col border-r border-slate-800 z-30 shadow-xl shrink-0">
+        <!-- Brand/Header Area -->
+        <div class="p-5 border-b border-slate-800 flex items-center gap-3">
+            <div class="w-10 h-10 bg-gradient-to-tr from-brand-600 to-cyan-500 rounded-xl flex items-center justify-center text-white font-bold text-lg shadow-md shadow-brand-500/10">
+                <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z" />
+                    <path d="M13 16V6H4v10h9z" />
+                    <path d="M13 8h7l2 3v5h-9V8z" />
+                </svg>
+            </div>
+            <div>
+                <h2 class="font-extrabold text-white text-lg tracking-wide leading-none">Driver<span class="text-brand-500">Pro</span></h2>
+                <span id="workspace-role-badge" class="text-[9px] text-slate-500 uppercase font-bold tracking-widest mt-1 block">Hệ thống quản trị</span>
+            </div>
+        </div>
+
+        <!-- ADMIN NAVIGATION MENU -->
+        <nav id="admin-nav-panel" class="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+            <p class="text-[10px] text-slate-600 font-bold uppercase tracking-wider px-3 mb-2">Giám sát tổng quan</p>
+            
+            <button onclick="switchTab('dashboard')" id="nav-dashboard" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition hover:bg-slate-900 hover:text-white text-brand-400 bg-slate-900">
+                <i class="fa-solid fa-chart-pie w-5 text-center text-brand-500"></i>
+                <span>Trang chủ Dashboard</span>
+            </button>
+            
+            <button onclick="switchTab('gps')" id="nav-gps" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition hover:bg-slate-900 hover:text-white">
+                <i class="fa-solid fa-map-location-dot w-5 text-center text-brand-500"></i>
+                <span class="flex-1 text-left">Giám sát GPS Live</span>
+                <span class="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            </button>
+
+            <p class="text-[10px] text-slate-600 font-bold uppercase tracking-wider px-3 pt-4 mb-2">Quản lý nhân sự</p>
+            
+            <button onclick="switchTab('drivers')" id="nav-drivers" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition hover:bg-slate-900 hover:text-white">
+                <i class="fa-solid fa-users-gear w-5 text-center text-brand-500"></i>
+                <span>Danh sách tài xế (<span id="sidebar-drivers-count">100</span>)</span>
+            </button>
+
+            <p class="text-[10px] text-slate-600 font-bold uppercase tracking-wider px-3 pt-4 mb-2">Điều hành & Kiểm soát</p>
+            
+            <button onclick="switchTab('rewards')" id="nav-rewards" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition hover:bg-slate-900 hover:text-white">
+                <i class="fa-solid fa-award w-5 text-center text-brand-500"></i>
+                <span>Quản lý Thưởng / Phạt</span>
+            </button>
+            
+            <button onclick="switchTab('violations')" id="nav-violations" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition hover:bg-slate-900 hover:text-white">
+                <i class="fa-solid fa-triangle-exclamation w-5 text-center text-brand-500"></i>
+                <span class="flex-1 text-left">Nhật ký vi phạm</span>
+                <span id="violation-badge" class="px-1.5 py-0.5 rounded text-[10px] bg-rose-500 text-white font-bold">3</span>
+            </button>
+
+            <button onclick="switchTab('complaints')" id="nav-complaints" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition hover:bg-slate-900 hover:text-white">
+                <i class="fa-solid fa-headset w-5 text-center text-brand-500"></i>
+                <span class="flex-1 text-left">Quản lý Khiếu nại</span>
+                <span id="complaint-badge" class="px-1.5 py-0.5 rounded text-[10px] bg-amber-500 text-white font-bold" style="display: none;">0</span>
+            </button>
+
+            <p class="text-[10px] text-slate-600 font-bold uppercase tracking-wider px-3 pt-4 mb-2">Báo cáo & Cài đặt</p>
+
+            <button onclick="switchTab('reports')" id="nav-reports" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition hover:bg-slate-900 hover:text-white">
+                <i class="fa-solid fa-file-invoice-dollar w-5 text-center text-brand-500"></i>
+                <span>Báo cáo & Thống kê</span>
+            </button>
+            
+            <button onclick="switchTab('settings')" id="nav-settings" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition hover:bg-slate-900 hover:text-white">
+                <i class="fa-solid fa-sliders w-5 text-center text-brand-500"></i>
+                <span>Cài đặt hệ thống</span>
+            </button>
+        </nav>
+
+        <!-- STAFF NAVIGATION MENU -->
+        <nav id="staff-nav-panel" class="flex-1 px-3 py-4 space-y-1 overflow-y-auto hidden">
+            <p class="text-[10px] text-slate-600 font-bold uppercase tracking-wider px-3 mb-2">Cổng thông tin lái xe</p>
+            
+            <button onclick="switchStaffTab('staff-dashboard')" id="nav-staff-dashboard" class="nav-btn-staff w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition hover:bg-slate-900 hover:text-white text-cyan-400 bg-slate-900">
+                <i class="fa-solid fa-id-card-clip w-5 text-center text-cyan-500"></i>
+                <span>Trang cá nhân</span>
+            </button>
+            
+            <button onclick="switchStaffTab('staff-route')" id="nav-staff-route" class="nav-btn-staff w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition hover:bg-slate-900 hover:text-white text-slate-300">
+                <i class="fa-solid fa-route w-5 text-center text-cyan-500"></i>
+                <span class="flex-1 text-left">Bản đồ Lịch trình</span>
+                <span class="h-2.5 w-2.5 rounded-full bg-emerald-500 animate-ping"></span>
+            </button>
+            
+            <button onclick="switchStaffTab('staff-history')" id="nav-staff-history" class="nav-btn-staff w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition hover:bg-slate-900 hover:text-white text-slate-300">
+                <i class="fa-solid fa-clock-rotate-left w-5 text-center text-cyan-500"></i>
+                <span>Thưởng & Sự cố riêng</span>
+            </button>
+
+            <p class="text-[10px] text-slate-600 font-bold uppercase tracking-wider px-3 pt-4 mb-2">Báo cáo nhanh</p>
+
+            <button onclick="switchStaffTab('staff-report')" id="nav-staff-report" class="nav-btn-staff w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition hover:bg-slate-900 hover:text-white text-slate-300">
+                <i class="fa-solid fa-comment-dots w-5 text-center text-amber-500"></i>
+                <span>Gửi khiếu nại / Báo cáo</span>
+            </button>
+        </nav>
+
+        <!-- Sidebar User Profile Footer -->
+        <div class="p-4 border-t border-slate-800 bg-slate-950 flex items-center justify-between">
+            <div class="flex items-center gap-2.5 overflow-hidden">
+                <div id="user-avatar-placeholder" class="w-9 h-9 rounded-full bg-brand-900 border border-brand-700 flex items-center justify-center text-white font-bold text-xs uppercase shadow-inner">
+                    GA
+                </div>
+                <div class="truncate">
+                    <p id="user-display-name" class="text-xs font-bold text-white leading-none">GIA AN</p>
+                    <span id="user-display-role" class="text-[9px] text-emerald-400 font-medium">Quản trị viên</span>
+                </div>
+            </div>
+            <button onclick="handleLogout()" class="text-slate-500 hover:text-rose-400 transition ml-2" title="Đăng xuất khỏi hệ thống">
+                <i class="fa-solid fa-right-from-bracket text-lg"></i>
+            </button>
+        </div>
+    </aside>
+
+    <!-- CONTENT WORKSPACE CONTAINER -->
+    <main class="flex-1 flex flex-col min-w-0 overflow-y-auto bg-slate-50">
+        <!-- TOP APP HEADER -->
+        <header class="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between shadow-sm sticky top-0 z-20">
+            <div class="flex items-center gap-3">
+                <button class="md:hidden text-slate-600 text-lg mr-2" id="mobile-sidebar-toggle">
+                    <i class="fa-solid fa-bars"></i>
+                </button>
+                <div>
+                    <h1 id="page-header-title" class="text-lg font-bold text-slate-900">Tổng quan Dashboard</h1>
+                    <p id="page-header-desc" class="text-xs text-slate-500">Xem báo cáo trực quan và số liệu thống kê vận tải thời gian thực.</p>
+                </div>
+            </div>
+
+            <!-- Top Header Right Actions -->
+            <div class="flex items-center gap-4">
+                <!-- Clock with Real-time updating -->
+                <div class="flex flex-col items-end text-right text-xs border-r pr-4 border-slate-200">
+                    <span class="text-slate-400">Thời gian hệ thống</span>
+                    <span id="live-clock" class="font-semibold text-brand-600 font-mono tracking-wide">--:--:-- | --/--/----</span>
+                </div>
+
+                <!-- Notification Bell Dropdown -->
+                <div class="relative">
+                    <button class="relative p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition" onclick="toggleNotificationDropdown()">
+                        <i class="fa-regular fa-bell text-lg"></i>
+                        <span id="bell-active-indicator" class="absolute top-1 right-1 w-2.5 h-2.5 rounded-full bg-rose-500 ring-2 ring-white"></span>
+                    </button>
+                    
+                    <div id="notification-dropdown-panel" class="absolute right-0 mt-3 w-80 bg-white border border-slate-200 rounded-2xl shadow-xl hidden z-50 overflow-hidden">
+                        <div class="p-3.5 bg-slate-900 text-white flex items-center justify-between">
+                            <span class="text-xs font-bold"><i class="fa-regular fa-bell mr-1"></i> Thông báo hệ thống</span>
+                            <span class="text-[10px] bg-rose-500 px-1.5 py-0.5 rounded-full font-bold" id="notif-badge-count">1</span>
+                        </div>
+                        <div class="divide-y divide-slate-100 max-h-[300px] overflow-y-auto" id="notification-list-container">
+                            <div class="p-3 hover:bg-slate-50 cursor-pointer transition">
+                                <p class="text-xs text-slate-700 font-medium">Chào mừng quản trị viên GIA AN!</p>
+                                <span class="text-[10px] text-slate-400">Vừa xong</span>
+                            </div>
+                        </div>
+                        <div class="p-2 bg-slate-50 text-center border-t border-slate-100">
+                            <button onclick="clearAllNotifications()" class="text-[10px] text-slate-500 hover:text-brand-600 font-bold">Xóa tất cả thông báo</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Server Status Status Tag -->
+                <div class="hidden md:block">
+                    <div class="bg-emerald-50 text-emerald-700 font-semibold text-xs px-3 py-1.5 rounded-full flex items-center gap-1.5 border border-emerald-200">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                        Đội xe: Vận hành tốt
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Universal App Alert / Toast Container -->
+        <div id="toast-container" class="fixed bottom-5 right-5 z-50 space-y-3 pointer-events-none"></div>
+
+        <!-- MAIN CENTRAL CONTENT INTERFACE -->
+        <div class="flex-1 p-6 space-y-6">
+
+            <!-- ================= ADMIN TABS ================= -->
+            
+            <!-- TAB 1: DASHBOARD OVERVIEW -->
+            <section id="tab-dashboard" class="tab-content space-y-6">
+                <!-- Status metrics grid -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div class="p-6 bg-white rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
+                        <div class="p-3.5 rounded-xl bg-blue-50 text-blue-600">
+                            <i class="fa-solid fa-truck-steering text-2xl"></i>
+                        </div>
+                        <div>
+                            <span class="text-xs text-slate-400 font-medium uppercase tracking-wider">Tổng số tài xế</span>
+                            <h4 id="metric-total-drivers" class="text-2xl font-bold text-slate-900 mt-1">100</h4>
+                        </div>
+                    </div>
+
+                    <div class="p-6 bg-white rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
+                        <div class="p-3.5 rounded-xl bg-emerald-50 text-emerald-600">
+                            <i class="fa-solid fa-route text-2xl"></i>
+                        </div>
+                        <div>
+                            <span class="text-xs text-slate-400 font-medium uppercase tracking-wider">Lượt di chuyển hôm nay</span>
+                            <h4 class="text-2xl font-bold text-slate-900 mt-1">384 chuyến</h4>
+                        </div>
+                    </div>
+
+                    <div class="p-6 bg-white rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
+                        <div class="p-3.5 rounded-xl bg-rose-50 text-rose-600">
+                            <i class="fa-solid fa-triangle-exclamation text-2xl"></i>
+                        </div>
+                        <div>
+                            <span class="text-xs text-slate-400 font-medium uppercase tracking-wider">Cảnh báo lỗi GPS/Máy</span>
+                            <h4 id="metric-violations" class="text-2xl font-bold text-slate-900 mt-1">0</h4>
+                        </div>
+                    </div>
+
+                    <div class="p-6 bg-white rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
+                        <div class="p-3.5 rounded-xl bg-amber-50 text-amber-600">
+                            <i class="fa-solid fa-star-half-stroke text-2xl"></i>
+                        </div>
+                        <div>
+                            <span class="text-xs text-slate-400 font-medium uppercase tracking-wider">Điểm an toàn trung bình</span>
+                            <h4 id="metric-avg-score" class="text-2xl font-bold text-slate-900 mt-1">0 / 10</h4>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Analytics Chart & Activity Panel -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <!-- Chart Panel -->
+                    <div class="p-6 bg-white rounded-2xl border border-slate-200 shadow-sm lg:col-span-2 flex flex-col justify-between">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="font-bold text-slate-900">Biểu đồ Đánh giá An toàn & Doanh thu vận tải</h3>
+                            <span class="text-xs bg-slate-100 px-2 py-1 rounded font-semibold text-slate-600">Theo tháng</span>
+                        </div>
+                        <div class="h-64 relative">
+                            <canvas id="dashboard-analytics-chart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Live Dispatch News Panel -->
+                    <div class="p-6 bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between">
+                        <div>
+                            <h3 class="font-bold text-slate-900 mb-4"><i class="fa-solid fa-bullhorn text-brand-500 mr-1.5"></i>Thông cáo từ Điều hành</h3>
+                            <div class="space-y-4">
+                                <div class="p-3.5 rounded-xl bg-rose-50 border border-rose-100">
+                                    <h4 class="font-bold text-xs text-rose-950 flex items-center gap-1.5">
+                                        <span class="h-2 w-2 rounded-full bg-rose-600 animate-ping"></span>Cảnh báo bão & ngập lụt
+                                    </h4>
+                                    <p class="text-[11px] text-rose-800 mt-1">Các tài xế di chuyển tuyến TPHCM - Vũng Tàu chú ý triều cường ngập nặng tại QL51.</p>
+                                </div>
+                                <div class="p-3.5 rounded-xl bg-emerald-50 border border-emerald-100">
+                                    <h4 class="font-bold text-xs text-emerald-900">Chính sách thưởng hiệu suất</h4>
+                                    <p class="text-[11px] text-emerald-700 mt-1">Tăng 15% thưởng cho tài xế tối ưu nhiên liệu trong tháng 6.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <button onclick="showNotification('Tính năng thêm thông báo chung dành riêng cho Quản trị viên!', 'info')" class="w-full text-center py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-lg transition mt-4">
+                            Tạo thông báo mới
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Recent active drivers grid view -->
+                <div class="space-y-4">
+                    <div class="flex items-center justify-between">
+                        <h3 class="font-bold text-slate-900 text-md">Đội ngũ xe đang hoạt động trực tuyến (6 tài xế ngẫu nhiên)</h3>
+                        <span class="text-xs text-slate-400 font-semibold uppercase">Giám sát live</span>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6" id="dashboard-online-drivers-grid">
+                        <!-- Drivers generated in JS -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 2: LIVE GPS MAP -->
+            <section id="tab-gps" class="tab-content space-y-6 hidden">
+                <div class="p-6 bg-white rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b pb-4">
+                        <div>
+                            <h3 class="font-bold text-slate-900">Bản đồ Giám sát Toàn Đội</h3>
+                            <p class="text-xs text-slate-500">Bản đồ vệ tinh cập nhật real-time. Các ký hiệu màu biểu thị trạng thái xe trực quan.</p>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                                <span class="h-1.5 w-1.5 rounded-full bg-emerald-500 mr-1 animate-pulse"></span> Online
+                            </span>
+                            <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-800">
+                                <span class="h-1.5 w-1.5 rounded-full bg-slate-400 mr-1"></span> Offline
+                            </span>
+                            <button onclick="recenterAdminMap()" class="bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition ml-2">
+                                <i class="fa-solid fa-crosshairs mr-1"></i> Định vị trung tâm
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="leaflet-map-container" class="map-container relative z-0"></div>
+                </div>
+            </section>
+
+            <!-- TAB 3: DRIVER LIST & MANAGEMENT -->
+            <section id="tab-drivers" class="tab-content space-y-6 hidden">
+                <div class="p-6 bg-white rounded-2xl border border-slate-200 shadow-sm space-y-6">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div>
+                            <h3 class="font-bold text-slate-900">Quản lý Hồ sơ & Trạng thái</h3>
+                            <p class="text-xs text-slate-500">Xem và quản lý thông tin của toàn bộ đội xe.</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <input type="text" id="search-driver-input" oninput="filterDriversTable()" placeholder="Tìm theo tên hoặc mã tài xế..." class="border border-slate-200 text-xs rounded-xl px-4 py-2 w-64 focus:outline-none focus:ring-2 focus:ring-brand-500">
+                            <button onclick="toggleAddDriverModal(true)" class="bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl flex items-center gap-1.5 transition whitespace-nowrap">
+                                <i class="fa-solid fa-user-plus"></i> Thêm tài xế mới
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="overflow-x-auto border rounded-xl border-slate-100 max-h-[500px] overflow-y-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead class="sticky top-0 bg-white shadow-sm z-10">
+                                <tr class="bg-slate-50 text-slate-400 text-[11px] font-bold uppercase tracking-wider border-b border-slate-100">
+                                    <th class="px-6 py-3">Tài xế & Mã số</th>
+                                    <th class="px-6 py-3">Phương tiện & Biển số</th>
+                                    <th class="px-6 py-3">Điện thoại</th>
+                                    <th class="px-6 py-3">Trạng thái</th>
+                                    <th class="px-6 py-3">Vận tốc</th>
+                                    <th class="px-6 py-3">Điểm lái xe</th>
+                                    <th class="px-6 py-3 text-right">Hành động</th>
+                                </tr>
+                            </thead>
+                            <tbody id="drivers-table-body" class="divide-y divide-slate-100 text-xs text-slate-700">
+                                <!-- Populated dynamically by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- ADD DRIVER MODAL (ADMIN ONLY) -->
+                <div id="add-driver-modal" class="fixed inset-0 bg-slate-950/40 backdrop-blur-sm flex items-center justify-center z-50 hidden">
+                    <div class="bg-white rounded-2xl border border-slate-200 w-full max-w-lg p-6 shadow-2xl m-4 animate-in fade-in zoom-in-95 duration-200">
+                        <div class="flex items-center justify-between border-b pb-4 mb-4">
+                            <h3 class="font-bold text-slate-900 text-md"><i class="fa-solid fa-user-plus text-brand-600 mr-1.5"></i>Đăng ký Tài xế mới (Quyền Admin)</h3>
+                            <button onclick="toggleAddDriverModal(false)" class="text-slate-400 hover:text-slate-600 text-lg"><i class="fa-solid fa-xmark"></i></button>
+                        </div>
+
+                        <form id="add-driver-form" class="space-y-4">
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-[11px] font-semibold text-slate-500 uppercase mb-1">Mã tài xế</label>
+                                    <input type="text" id="new-driver-code" required class="w-full border border-slate-200 rounded-lg p-2 focus:ring-2 focus:ring-brand-500 focus:outline-none text-xs" placeholder="TX-101">
+                                </div>
+                                <div>
+                                    <label class="block text-[11px] font-semibold text-slate-500 uppercase mb-1">Họ tên tài xế</label>
+                                    <input type="text" id="new-driver-name" required class="w-full border border-slate-200 rounded-lg p-2 focus:ring-2 focus:ring-brand-500 focus:outline-none text-xs" placeholder="Nguyễn Văn An">
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-[11px] font-semibold text-slate-500 uppercase mb-1">Số điện thoại đăng ký</label>
+                                    <input type="text" id="new-driver-phone" required class="w-full border border-slate-200 rounded-lg p-2 focus:ring-2 focus:ring-brand-500 focus:outline-none text-xs" placeholder="0901234567">
+                                </div>
+                                <div>
+                                    <label class="block text-[11px] font-semibold text-slate-500 uppercase mb-1">Kiểu xe & Biển kiểm soát</label>
+                                    <input type="text" id="new-driver-vehicle" required class="w-full border border-slate-200 rounded-lg p-2 focus:ring-2 focus:ring-brand-500 focus:outline-none text-xs" placeholder="Tải 5 tấn - 29C-123.45">
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-3 gap-4">
+                                <div>
+                                    <label class="block text-[11px] font-semibold text-slate-500 uppercase mb-1">Kinh độ GPS (X)</label>
+                                    <input type="number" step="0.0001" id="new-driver-lng" required class="w-full border border-slate-200 rounded-lg p-2 focus:ring-2 focus:ring-brand-500 focus:outline-none text-xs" value="106.6800">
+                                </div>
+                                <div>
+                                    <label class="block text-[11px] font-semibold text-slate-500 uppercase mb-1">Vĩ độ GPS (Y)</label>
+                                    <input type="number" step="0.0001" id="new-driver-lat" required class="w-full border border-slate-200 rounded-lg p-2 focus:ring-2 focus:ring-brand-500 focus:outline-none text-xs" value="10.7700">
+                                </div>
+                                <div>
+                                    <label class="block text-[11px] font-semibold text-slate-500 uppercase mb-1">Vận tốc ban đầu</label>
+                                    <input type="number" id="new-driver-speed" required class="w-full border border-slate-200 rounded-lg p-2 focus:ring-2 focus:ring-brand-500 focus:outline-none text-xs" value="0">
+                                </div>
+                            </div>
+
+                            <div class="pt-4 border-t flex justify-end gap-3">
+                                <button type="button" onclick="toggleAddDriverModal(false)" class="px-4 py-2 border border-slate-200 text-slate-600 font-semibold text-xs rounded-xl hover:bg-slate-50 transition">Hủy bỏ</button>
+                                <button type="submit" class="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white font-semibold text-xs rounded-xl shadow-lg shadow-brand-600/20 transition">Thêm tài xế</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 4: REWARDS & FINES MANAGEMENT -->
+            <section id="tab-rewards" class="tab-content space-y-6 hidden">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <!-- Form Submit Reward/Fine -->
+                    <div class="p-6 bg-white rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                        <h3 class="font-bold text-slate-900 text-sm border-b pb-2"><i class="fa-solid fa-award text-amber-500 mr-1.5"></i>Ban hành Quyết định Điều hành</h3>
+                        <form id="reward-fine-form" class="space-y-4 text-xs">
+                            <div>
+                                <label class="block font-bold text-slate-500 mb-1">Chọn tài xế áp dụng</label>
+                                <select id="action-driver-select" required class="w-full border border-slate-200 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-brand-500 text-xs">
+                                    <!-- Populated in JS -->
+                                </select>
+                            </div>
+
+                            <div>
+                                <label class="block font-bold text-slate-500 mb-1">Hình thức áp dụng</label>
+                                <div class="grid grid-cols-2 gap-3">
+                                    <label class="flex items-center justify-center p-2 border border-slate-200 rounded-lg cursor-pointer hover:bg-slate-50 transition">
+                                        <input type="radio" name="action-type" value="Thưởng" checked class="text-brand-600 mr-2">
+                                        <span class="font-bold text-emerald-600"><i class="fa-solid fa-circle-chevron-up mr-1"></i>Khen Thưởng</span>
+                                    </label>
+                                    <label class="flex items-center justify-center p-2 border border-slate-200 rounded-lg cursor-pointer hover:bg-slate-50 transition">
+                                        <input type="radio" name="action-type" value="Phạt" class="text-brand-600 mr-2">
+                                        <span class="font-bold text-rose-600"><i class="fa-solid fa-circle-chevron-down mr-1"></i>Phạt Kỷ Luật</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block font-bold text-slate-500 mb-1">Lý do điều chỉnh</label>
+                                <textarea id="action-reason" required class="w-full border border-slate-200 rounded-lg p-2.5 h-20 focus:outline-none focus:ring-2 focus:ring-brand-500 text-xs" placeholder="Ghi rõ lý do (ví dụ: Vận hành đúng lịch trình, tiết kiệm xăng...)"></textarea>
+                            </div>
+
+                            <div>
+                                <label class="block font-bold text-slate-500 mb-1">Số tiền mặt định mức (VNĐ)</label>
+                                <input type="number" id="action-amount" required class="w-full border border-slate-200 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-brand-500 text-xs" placeholder="100000" value="200000">
+                            </div>
+
+                            <button type="submit" class="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl shadow-md transition">
+                                Gửi Phê Duyệt
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Logs Table -->
+                    <div class="p-6 bg-white rounded-2xl border border-slate-200 shadow-sm md:col-span-2 space-y-4">
+                        <div class="flex items-center justify-between border-b pb-3">
+                            <h3 class="font-bold text-slate-900 text-sm">Nhật ký Thưởng / Phạt Gần Đây</h3>
+                            <span class="text-[10px] text-slate-400 font-bold uppercase font-mono">Sổ sách điện tử</span>
+                        </div>
+                        <div class="overflow-x-auto max-h-[400px]">
+                            <table class="w-full text-left">
+                                <thead class="sticky top-0 bg-white">
+                                    <tr class="bg-slate-50 text-slate-400 text-[10px] font-bold uppercase tracking-wider border-b">
+                                        <th class="px-4 py-2">Tài xế</th>
+                                        <th class="px-4 py-2">Loại</th>
+                                        <th class="px-4 py-2">Lý do</th>
+                                        <th class="px-4 py-2 text-right">Số tiền</th>
+                                        <th class="px-4 py-2">Duyệt bởi</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="rewards-table-body" class="divide-y divide-slate-100 text-xs text-slate-700">
+                                    <!-- Dynamic rows via JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 5: VIOLATIONS LOG -->
+            <section id="tab-violations" class="tab-content space-y-6 hidden">
+                <div class="p-6 bg-white rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                    <div class="flex items-center justify-between border-b pb-4">
+                        <div>
+                            <h3 class="font-bold text-slate-900">Báo cáo vi phạm & Lỗi phần cứng khẩn cấp</h3>
+                            <p class="text-xs text-slate-500">Phát hiện tự động bằng thuật toán AI từ cảm biến động cơ và tọa độ GPS.</p>
+                        </div>
+                        <span class="bg-rose-100 text-rose-800 text-xs font-bold px-3 py-1 rounded-full"><i class="fa-solid fa-triangle-exclamation mr-1 animate-pulse"></i>Hệ thống bảo vệ</span>
+                    </div>
+
+                    <div class="overflow-x-auto border rounded-xl border-slate-100">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-slate-50 text-slate-400 text-[11px] font-bold uppercase border-b border-slate-100">
+                                    <th class="px-6 py-3">Tài xế</th>
+                                    <th class="px-6 py-3">Thời điểm xảy ra</th>
+                                    <th class="px-6 py-3">Mô tả sự cố & Hành vi</th>
+                                    <th class="px-6 py-3">Vị trí xảy ra</th>
+                                    <th class="px-6 py-3">Mức độ nguy hiểm</th>
+                                    <th class="px-6 py-3">Xử lý</th>
+                                </tr>
+                            </thead>
+                            <tbody id="violations-table-body" class="divide-y divide-slate-100 text-xs text-slate-700">
+                                <!-- Populated dynamically by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 8: COMPLAINTS MANAGEMENT (NEW) -->
+            <section id="tab-complaints" class="tab-content space-y-6 hidden">
+                <div class="p-6 bg-white rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                    <div class="flex items-center justify-between border-b pb-4">
+                        <div>
+                            <h3 class="font-bold text-slate-900">Quản lý Yêu cầu & Khiếu nại từ Tài xế</h3>
+                            <p class="text-xs text-slate-500">Tiếp nhận và xử lý các phản hồi, báo cáo sự cố từ nhân viên lái xe trong hệ thống.</p>
+                        </div>
+                    </div>
+
+                    <div class="overflow-x-auto border rounded-xl border-slate-100 max-h-[500px] overflow-y-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead class="sticky top-0 bg-white shadow-sm z-10">
+                                <tr class="bg-slate-50 text-slate-400 text-[11px] font-bold uppercase border-b border-slate-100">
+                                    <th class="px-6 py-3">Tài xế & Thời gian</th>
+                                    <th class="px-6 py-3">Phân loại</th>
+                                    <th class="px-6 py-3">Nội dung chi tiết</th>
+                                    <th class="px-6 py-3">Trạng thái</th>
+                                    <th class="px-6 py-3 text-right">Thao tác</th>
+                                </tr>
+                            </thead>
+                            <tbody id="complaints-table-body" class="divide-y divide-slate-100 text-xs text-slate-700">
+                                <!-- Populated dynamically by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 6: REPORTING & STATS -->
+            <section id="tab-reports" class="tab-content space-y-6 hidden">
+                <div class="p-6 bg-white rounded-2xl border border-slate-200 shadow-sm space-y-6">
+                    <div class="flex items-center justify-between border-b pb-4">
+                        <div>
+                            <h3 class="font-bold text-slate-900">Báo cáo & Thống kê Tài chính Vận tải</h3>
+                            <p class="text-xs text-slate-500">Theo dõi doanh thu, chi phí khấu hao, chỉ số hành trình của doanh nghiệp.</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button onclick="showNotification('Đang xuất file PDF...','info')" class="bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs px-3.5 py-1.5 rounded-lg transition"><i class="fa-solid fa-file-pdf mr-1"></i> PDF</button>
+                            <button onclick="showNotification('Đang xuất file Excel...','info')" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-3.5 py-1.5 rounded-lg transition"><i class="fa-solid fa-file-excel mr-1"></i> Excel</button>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div class="p-6 bg-slate-50 rounded-2xl border border-slate-100 text-center">
+                            <h4 class="text-xs font-bold text-slate-400 uppercase">Khấu hao nhiên liệu trung bình</h4>
+                            <p class="text-3xl font-extrabold text-slate-900 mt-2">14.1 Lít <span class="text-xs text-slate-500">/ 100km</span></p>
+                            <span class="text-[10px] text-emerald-600 font-bold mt-1 block"><i class="fa-solid fa-circle-chevron-down mr-0.5"></i>Tối ưu nhiên liệu giảm 6.8%</span>
+                        </div>
+                        <div class="p-6 bg-slate-50 rounded-2xl border border-slate-100 text-center">
+                            <h4 class="text-xs font-bold text-slate-400 uppercase">Doanh thu toàn đội vận tải</h4>
+                            <p class="text-3xl font-extrabold text-brand-600 mt-2">1,540,000,000 đ</p>
+                            <span class="text-[10px] text-emerald-600 font-bold mt-1 block"><i class="fa-solid fa-circle-chevron-up mr-0.5"></i>Doanh thu tăng 21.5%</span>
+                        </div>
+                        <div class="p-6 bg-slate-50 rounded-2xl border border-slate-100 text-center">
+                            <h4 class="text-xs font-bold text-slate-400 uppercase">Độ hài lòng trung bình của khách hàng</h4>
+                            <p class="text-3xl font-extrabold text-amber-500 mt-2">4.89 / 5 <i class="fa-solid fa-star"></i></p>
+                            <span class="text-[10px] text-slate-500 font-bold mt-1 block">Tỉ lệ phản hồi tốt đạt 98%</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 7: SYSTEM SETTINGS -->
+            <section id="tab-settings" class="tab-content space-y-6 hidden">
+                <div class="p-6 bg-white rounded-2xl border border-slate-200 shadow-sm space-y-6">
+                    <h3 class="font-bold text-slate-900 border-b pb-2 text-md">Cài đặt Cấu hình & Ngưỡng Giám sát</h3>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8 text-xs">
+                        <div class="space-y-4">
+                            <h4 class="font-bold text-slate-700 uppercase tracking-wide">1. Thiết lập Cảnh báo tốc độ</h4>
+                            <div>
+                                <label class="block font-semibold text-slate-500 mb-1">Tốc độ tối đa cho phép nội đô (km/h)</label>
+                                <input type="number" id="setting-speed-inner" class="w-full border p-2.5 rounded-lg text-xs" value="60">
+                            </div>
+                            <div>
+                                <label class="block font-semibold text-slate-500 mb-1">Tốc độ tối đa cho phép cao tốc (km/h)</label>
+                                <input type="number" id="setting-speed-highway" class="w-full border p-2.5 rounded-lg text-xs" value="100">
+                            </div>
+                        </div>
+
+                        <div class="space-y-4">
+                            <h4 class="font-bold text-slate-700 uppercase tracking-wide">2. Thiết lập Hệ thống thông minh</h4>
+                            <div>
+                                <label class="block font-semibold text-slate-500 mb-1">Thời gian lấy mẫu định vị GPS (Giây)</label>
+                                <input type="number" class="w-full border p-2.5 rounded-lg text-xs" value="5">
+                            </div>
+                            <div>
+                                <label class="block font-semibold text-slate-500 mb-1">Địa chỉ Email nhận báo cáo khẩn</label>
+                                <input type="email" class="w-full border p-2.5 rounded-lg text-xs" value="baocao@driverpro.vn">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="pt-4 border-t flex justify-end">
+                        <button onclick="showNotification('Đã lưu toàn bộ cấu hình hệ thống DriverPro thành công!', 'success')" class="bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs px-5 py-2.5 rounded-xl transition">
+                            Lưu cấu hình hệ thống
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ================= EMPLOYEE / STAFF PORTAL TABS ================= -->
+            
+            <!-- STAFF TAB 1: DASHBOARD FOR DRIVER -->
+            <section id="tab-staff-dashboard" class="tab-content-staff space-y-6 hidden">
+                <div class="p-6 bg-gradient-to-r from-slate-900 to-slate-800 text-white rounded-2xl border border-slate-700 shadow-xl relative overflow-hidden">
+                    <div class="absolute -right-10 -bottom-10 opacity-10 text-9xl">
+                        <i class="fa-solid fa-truck-fast"></i>
+                    </div>
+                    <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+                        <div>
+                            <span class="text-xs bg-cyan-500/20 text-cyan-300 font-bold px-2.5 py-1 rounded-full uppercase tracking-widest animate-pulse">Lái xe chính thức</span>
+                            <h2 class="text-2xl font-extrabold mt-3">Xin chào tài xế, <span id="staff-name-display" class="text-cyan-400">Tài xế DriverPro</span>!</h2>
+                            <p class="text-slate-300 text-sm mt-1">Chúc bạn vạn dặm bình an. Nhắc nhở: Lái xe an toàn là trên hết!</p>
+                        </div>
+                        <div class="flex items-center gap-4 bg-slate-950/40 p-4 rounded-xl border border-slate-700/60 self-start md:self-auto">
+                            <div class="text-center">
+                                <span class="text-[9px] text-slate-400 uppercase tracking-widest block">Điểm Lái Xe An Toàn</span>
+                                <span class="text-2xl font-black text-emerald-400 mt-1 block" id="staff-score-display">9.5 <span class="text-xs text-slate-500">/10</span></span>
+                            </div>
+                            <div class="border-l border-slate-700 h-8"></div>
+                            <div class="text-center">
+                                <span class="text-[9px] text-slate-400 uppercase tracking-widest block">Hạng tài xế</span>
+                                <span class="text-xs font-bold text-amber-400 mt-1 block"><i class="fa-solid fa-crown mr-1 animate-bounce"></i>Hạng Vàng</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Personal stats driver card grid -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div class="p-5 bg-white rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
+                        <div class="p-3 bg-cyan-50 text-cyan-600 rounded-xl">
+                            <i class="fa-solid fa-truck text-xl"></i>
+                        </div>
+                        <div>
+                            <span class="text-[10px] text-slate-400 font-semibold uppercase">Xe được giao</span>
+                            <p id="staff-vehicle-text" class="text-xs font-extrabold text-slate-800 mt-0.5">--</p>
+                        </div>
+                    </div>
+                    <div class="p-5 bg-white rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
+                        <div class="p-3 bg-indigo-50 text-indigo-600 rounded-xl">
+                            <i class="fa-solid fa-map-pin text-xl"></i>
+                        </div>
+                        <div>
+                            <span class="text-[10px] text-slate-400 font-semibold uppercase">Tuyến đường</span>
+                            <p id="staff-route-text" class="text-xs font-extrabold text-slate-800 mt-0.5">--</p>
+                        </div>
+                    </div>
+                    <div class="p-5 bg-white rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
+                        <div class="p-3 bg-emerald-50 text-emerald-600 rounded-xl">
+                            <i class="fa-solid fa-dollar-sign text-xl"></i>
+                        </div>
+                        <div>
+                            <span class="text-[10px] text-slate-400 font-semibold uppercase">Doanh thu tạm tính</span>
+                            <p id="staff-revenue-text" class="text-xs font-extrabold text-slate-800 mt-0.5">--</p>
+                        </div>
+                    </div>
+                    <div class="p-5 bg-white rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
+                        <div class="p-3 bg-rose-50 text-rose-600 rounded-xl">
+                            <i class="fa-solid fa-triangle-exclamation text-xl"></i>
+                        </div>
+                        <div>
+                            <span class="text-[10px] text-slate-400 font-semibold uppercase">Vi phạm tháng</span>
+                            <p id="staff-violations-text" class="text-xs font-extrabold text-slate-800 mt-0.5">0</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- STAFF TAB 2: ROUTE MAP -->
+            <section id="tab-staff-route" class="tab-content-staff space-y-6 hidden">
+                <div class="p-6 bg-white rounded-2xl border border-slate-200 shadow-sm">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="font-bold text-slate-900">Bản đồ Lịch trình & Vị trí hiện tại</h3>
+                        <span class="inline-flex items-center px-2 py-1 rounded text-xs font-bold bg-cyan-100 text-cyan-800">
+                            <i class="fa-solid fa-location-crosshairs mr-1"></i> GPS đang hoạt động
+                        </span>
+                    </div>
+                    <div id="staff-leaflet-map-container" class="map-container relative z-0"></div>
+                </div>
+            </section>
+
+            <!-- STAFF TAB 3: REWARDS & HISTORY -->
+            <section id="tab-staff-history" class="tab-content-staff space-y-6 hidden">
+                <div class="p-6 bg-white rounded-2xl border border-slate-200 shadow-sm">
+                    <h3 class="font-bold text-slate-900 mb-4 border-b pb-3">Lịch sử Khen thưởng / Kỷ luật Của Bạn</h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs border-collapse">
+                            <thead class="bg-slate-50 text-slate-500 uppercase">
+                                <tr>
+                                    <th class="px-4 py-3 border-b">Ngày ghi nhận</th>
+                                    <th class="px-4 py-3 border-b">Phân loại</th>
+                                    <th class="px-4 py-3 border-b">Nội dung / Lý do chi tiết</th>
+                                    <th class="px-4 py-3 border-b text-right">Mức tiền (VNĐ)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="staff-history-table" class="divide-y divide-slate-100">
+                                <!-- Populated dynamically based on user logs -->
+                                <tr>
+                                    <td class="px-4 py-3 text-slate-500">10/06/2026</td>
+                                    <td class="px-4 py-3"><span class="px-2 py-1 rounded bg-emerald-100 text-emerald-700 font-bold text-[10px]">Thưởng</span></td>
+                                    <td class="px-4 py-3">Thưởng hiệu suất lái xe an toàn tuần 1</td>
+                                    <td class="px-4 py-3 text-right font-bold text-emerald-600">+200,000</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- STAFF TAB 4: COMPLAINT / INCIDENT REPORT -->
+            <section id="tab-staff-report" class="tab-content-staff space-y-6 hidden">
+                <div class="p-6 bg-white rounded-2xl border border-slate-200 shadow-sm max-w-2xl mx-auto">
+                    <h3 class="font-bold text-slate-900 text-lg border-b pb-3 mb-4"><i class="fa-solid fa-comment-dots text-amber-500 mr-2"></i>Gửi Báo cáo / Khiếu nại</h3>
+                    <form id="staff-complaint-form" class="space-y-5">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1.5">Loại báo cáo / Khiếu nại</label>
+                            <select id="complaint-type" class="w-full border border-slate-200 rounded-xl p-3 text-xs focus:ring-2 focus:ring-amber-500 outline-none bg-slate-50">
+                                <option value="Sự cố xe">Sự cố kỹ thuật phương tiện</option>
+                                <option value="Tai nạn">Tai nạn giao thông / Va chạm</option>
+                                <option value="Phạt oan">Khiếu nại về Lỗi vi phạm / Tiền phạt</option>
+                                <option value="Khách hàng">Vấn đề phát sinh với Khách hàng/Kho bãi</option>
+                                <option value="Khác">Lý do khác</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1.5">Chi tiết sự việc</label>
+                            <textarea id="complaint-desc" required rows="5" class="w-full border border-slate-200 rounded-xl p-3 text-xs focus:ring-2 focus:ring-amber-500 outline-none bg-slate-50" placeholder="Mô tả rõ ràng vấn đề bạn đang gặp phải hoặc lý do khiếu nại của bạn..."></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1.5">Vị trí hiện tại (Nếu liên quan sự cố trên đường)</label>
+                            <div class="flex gap-2">
+                                <input type="text" id="complaint-location" class="w-full border border-slate-200 rounded-xl p-3 text-xs focus:ring-2 focus:ring-amber-500 outline-none bg-slate-50" placeholder="Ví dụ: QL51, đoạn qua Long Thành">
+                                <button type="button" class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 rounded-xl transition" title="Lấy vị trí GPS hiện tại"><i class="fa-solid fa-location-dot"></i></button>
+                            </div>
+                        </div>
+                        <div class="pt-2">
+                            <button type="submit" class="w-full py-3.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-bold text-sm rounded-xl shadow-lg transition">
+                                <i class="fa-solid fa-paper-plane mr-2"></i>Gửi Báo Cáo Cho Quản Trị Viên (GIA AN)
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </section>
+
+        </div>
+    </main>
+</div>
+
+<script>
+    // --- 1. MOCK DATA INITIALIZATION ---
+    // Generate a unified dataset of 100 drivers shared between Admin and Staff roles.
+    const driversData = [];
+    const provinces = ['TP.HCM', 'Đồng Nai', 'Bình Dương', 'Vũng Tàu', 'Long An', 'Tây Ninh', 'Bình Phước', 'Tiền Giang', 'Tây Nguyên', 'Đà Lạt'];
+    
+    // First Names & Last names for generation
+    const lastNames = ['Nguyễn', 'Trần', 'Lê', 'Phạm', 'Hoàng', 'Huỳnh', 'Phan', 'Vũ', 'Võ', 'Đặng'];
+    const firstNames = ['An', 'Bình', 'Cường', 'Dũng', 'Em', 'Hải', 'Minh', 'Khoa', 'Tài', 'Tuấn', 'Lộc', 'Phúc', 'Sơn', 'Tâm'];
+
+    let totalOnline = 0;
+    let totalViolations = 0;
+    let totalScore = 0;
+
+    for(let i=1; i<=100; i++) {
+        const id = `TX-${i.toString().padStart(2, '0')}`;
+        const isOnline = Math.random() > 0.3; // 70% chance of being online
+        if(isOnline) totalOnline++;
+        
+        const violations = Math.floor(Math.random() * 4); // 0 to 3
+        totalViolations += violations;
+        
+        const score = parseFloat((Math.random() * 3 + 7).toFixed(1)); // 7.0 to 10.0
+        totalScore += score;
+        
+        driversData.push({
+            id: id,
+            name: `${lastNames[Math.floor(Math.random()*lastNames.length)]} ${firstNames[Math.floor(Math.random()*firstNames.length)]}`,
+            phone: `09${Math.floor(Math.random() * 100000000).toString().padStart(8, '0')}`,
+            vehicle: `Tải ${Math.floor(Math.random() * 5 + 1)} tấn - ${Math.floor(Math.random() * 90 + 10)}C-${Math.floor(Math.random() * 900 + 100)}.${Math.floor(Math.random() * 90 + 10)}`,
+            status: isOnline ? 'Online' : 'Offline',
+            speed: isOnline ? Math.floor(Math.random() * 70) : 0, // Speed 0 if offline
+            score: score,
+            route: `Kho ${provinces[Math.floor(Math.random()*provinces.length)]} -> Kho ${provinces[Math.floor(Math.random()*provinces.length)]}`,
+            lat: 10.762622 + (Math.random() - 0.5) * 0.2, // Spread around HCMC
+            lng: 106.660172 + (Math.random() - 0.5) * 0.2,
+            violations: violations,
+            revenue: (Math.random() * 5 + 2).toFixed(1) + " Triệu"
+        });
+    }
+
+    const actionLogs = [
+        { driver: 'TX-05', type: 'Thưởng', reason: 'Vượt chỉ tiêu chuyến', amount: 500000, date: 'Vừa xong' },
+        { driver: 'TX-12', type: 'Phạt', reason: 'Vượt đèn đỏ ngã 4', amount: -200000, date: '1 giờ trước' },
+    ];
+
+    const violationLogs = [
+        { driver: 'TX-12', time: '14:30', desc: 'Vượt đèn đỏ', loc: 'Ngã tư Vũng Tàu', level: 'Cao' },
+        { driver: 'TX-45', time: '13:15', desc: 'Quá tốc độ (85/60)', loc: 'QL51', level: 'Trung bình' },
+        { driver: 'TX-88', time: '09:00', desc: 'Sai làn đường', loc: 'Mai Chí Thọ', level: 'Thấp' }
+    ];
+
+    // Dữ liệu khiếu nại mô phỏng ban đầu
+    let complaintsData = [
+        { id: 1, driverId: 'TX-02', driverName: 'Trần Bình', time: '10:15 04/07/2026', type: 'Sự cố xe', desc: 'Xe bị nổ lốp tại trạm thu phí Long Phước', status: 'Chờ xử lý' },
+        { id: 2, driverId: 'TX-15', driverName: 'Lê Cường', time: '09:30 04/07/2026', type: 'Khách hàng', desc: 'Khách hàng từ chối nhận hàng do sai mã bill', status: 'Đã xử lý' }
+    ];
+
+    let currentRole = 'admin'; // For login screen toggle
+    let loggedInUserRole = null; // 'admin' or 'staff'
+    let currentStaffData = null; 
+
+    // Maps
+    let adminMapInstance = null;
+    let staffMapInstance = null;
+    let adminChartInstance = null;
+
+    // --- 2. CLOCK TICKER ---
+    function updateLiveClock() {
+        const clockEl = document.getElementById('live-clock');
+        if(clockEl) {
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString('vi-VN', { hour12: false });
+            const dateStr = now.toLocaleDateString('vi-VN');
+            clockEl.innerText = `${timeStr} | ${dateStr}`;
+        }
+    }
+    setInterval(updateLiveClock, 1000);
+    updateLiveClock();
+
+    // --- 3. UI UTILITIES & TOASTS ---
+    function showNotification(message, type = 'info') {
+        const toastContainer = document.getElementById('toast-container');
+        const toast = document.createElement('div');
+        
+        let bgColor = 'bg-slate-900';
+        let icon = 'fa-info-circle';
+        
+        if(type === 'success') { bgColor = 'bg-emerald-600'; icon = 'fa-check-circle'; }
+        else if(type === 'warning') { bgColor = 'bg-amber-500'; icon = 'fa-exclamation-triangle'; }
+        else if(type === 'error') { bgColor = 'bg-rose-600'; icon = 'fa-xmark-circle'; }
+
+        toast.className = `${bgColor} text-white px-5 py-3 rounded-xl shadow-lg flex items-center gap-3 transform transition-all duration-300 translate-y-full opacity-0 max-w-sm`;
+        toast.innerHTML = `<i class="fa-solid ${icon} text-lg"></i> <span class="text-sm font-medium">${message}</span>`;
+        
+        toastContainer.appendChild(toast);
+        
+        // Animate in
+        setTimeout(() => {
+            toast.classList.remove('translate-y-full', 'opacity-0');
+        }, 10);
+
+        // Animate out
+        setTimeout(() => {
+            toast.classList.add('translate-y-full', 'opacity-0');
+            setTimeout(() => toast.remove(), 300);
+        }, 4000);
+    }
+
+    function toggleNotificationDropdown() {
+        const panel = document.getElementById('notification-dropdown-panel');
+        panel.classList.toggle('hidden');
+    }
+
+    function clearAllNotifications() {
+        document.getElementById('notification-list-container').innerHTML = '<p class="p-4 text-center text-xs text-slate-500">Không có thông báo mới.</p>';
+        document.getElementById('notif-badge-count').innerText = '0';
+        document.getElementById('bell-active-indicator').classList.add('hidden');
+        toggleNotificationDropdown();
+    }
+
+    // --- 4. LOGIN & AUTH LOGIC ---
+    function toggleLoginRole(role) {
+        currentRole = role;
+        const adminBtn = document.getElementById('tab-admin-btn');
+        const staffBtn = document.getElementById('tab-staff-btn');
+        const adminForm = document.getElementById('login-form');
+        const staffForm = document.getElementById('staff-login-form');
+        const errorMsg = document.getElementById('login-error-msg');
+
+        errorMsg.classList.add('hidden'); // Hide errors on tab switch
+
+        if(role === 'admin') {
+            adminBtn.className = 'py-2.5 text-xs font-bold uppercase tracking-wider rounded-lg transition-all duration-200 text-white bg-brand-600 shadow-lg';
+            staffBtn.className = 'py-2.5 text-xs font-bold uppercase tracking-wider rounded-lg transition-all duration-200 text-slate-400 hover:text-white';
+            adminForm.classList.remove('hidden');
+            staffForm.classList.add('hidden');
+        } else {
+            staffBtn.className = 'py-2.5 text-xs font-bold uppercase tracking-wider rounded-lg transition-all duration-200 text-white bg-cyan-600 shadow-lg';
+            adminBtn.className = 'py-2.5 text-xs font-bold uppercase tracking-wider rounded-lg transition-all duration-200 text-slate-400 hover:text-white';
+            staffForm.classList.remove('hidden');
+            adminForm.classList.add('hidden');
+        }
+    }
+
+    // Admin Login
+    document.getElementById('login-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const user = document.getElementById('login-username').value;
+        const pass = document.getElementById('login-password').value;
+        if((user === 'admin@driverpro.vn' || user === 'giaan@driverpro.vn') && pass === 'driverpro2026') {
+            doLogin('admin');
+        } else {
+            showLoginError('Tài khoản hoặc mật khẩu quản trị sai.');
+        }
+    });
+
+    // Staff Login
+    document.getElementById('staff-login-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const id = document.getElementById('staff-id').value.trim().toUpperCase();
+        const pass = document.getElementById('staff-password').value;
+        
+        // Find driver in our database
+        const driver = driversData.find(d => d.id === id);
+        
+        if(driver && pass === 'driverpro123') {
+            currentStaffData = driver;
+            doLogin('staff');
+        } else {
+            showLoginError('Mã tài xế không tồn tại hoặc sai mật khẩu.');
+        }
+    });
+
+    function showLoginError(msg) {
+        const errorEl = document.getElementById('login-error-msg');
+        document.getElementById('error-text').innerText = msg;
+        errorEl.classList.remove('hidden');
+        // Shake effect
+        errorEl.classList.add('animate-[bounce_0.5s]');
+        setTimeout(() => errorEl.classList.remove('animate-[bounce_0.5s]'), 500);
+    }
+
+    function doLogin(role) {
+        loggedInUserRole = role;
+        document.getElementById('login-screen').classList.add('hidden');
+        document.getElementById('app-workspace').classList.remove('hidden');
+        
+        setupWorkspaceBasedOnRole();
+    }
+
+    function handleLogout() {
+        document.getElementById('app-workspace').classList.add('hidden');
+        document.getElementById('login-screen').classList.remove('hidden');
+        loggedInUserRole = null;
+        currentStaffData = null;
+        showNotification('Đã đăng xuất khỏi hệ thống', 'info');
+    }
+
+    // --- 5. WORKSPACE INITIALIZATION & DATA BINDING ---
+    function setupWorkspaceBasedOnRole() {
+        const adminNav = document.getElementById('admin-nav-panel');
+        const staffNav = document.getElementById('staff-nav-panel');
+        
+        // Clean up UI to prevent tab overlapping from previous sessions
+        document.querySelectorAll('.tab-content, .tab-content-staff').forEach(el => el.classList.add('hidden'));
+
+        if(loggedInUserRole === 'admin') {
+            // UI Setup
+            adminNav.classList.remove('hidden');
+            staffNav.classList.add('hidden');
+            document.getElementById('workspace-role-badge').innerText = 'Hệ thống Quản trị';
+            document.getElementById('workspace-role-badge').className = 'text-[9px] text-brand-400 uppercase font-bold tracking-widest mt-1 block';
+            
+            // Đổi tên Admin thành GIA AN
+            document.getElementById('user-display-name').innerText = 'GIA AN';
+            document.getElementById('user-display-role').innerText = 'Quản trị viên';
+            document.getElementById('user-avatar-placeholder').innerText = 'GA';
+            document.getElementById('user-avatar-placeholder').className = 'w-9 h-9 rounded-full bg-brand-900 border border-brand-700 flex items-center justify-center text-white font-bold text-xs uppercase shadow-inner';
+            
+            // Populate Admin Data
+            document.getElementById('metric-total-drivers').innerText = driversData.length;
+            document.getElementById('metric-violations').innerText = totalViolations;
+            document.getElementById('metric-avg-score').innerText = (totalScore / driversData.length).toFixed(1) + ' / 10';
+            document.getElementById('sidebar-drivers-count').innerText = driversData.length;
+            
+            populateAdminDriversTable();
+            populateAdminOnlineGrid();
+            populateActionDriverSelect();
+            populateRewardsTable();
+            populateViolationsTable();
+            populateComplaintsTable();
+            initAdminChart();
+            
+            // Switch to default tab
+            switchTab('dashboard');
+
+        } else if (loggedInUserRole === 'staff') {
+            // UI Setup
+            adminNav.classList.add('hidden');
+            staffNav.classList.remove('hidden');
+            document.getElementById('workspace-role-badge').innerText = 'Portal Tài Xế';
+            document.getElementById('workspace-role-badge').className = 'text-[9px] text-cyan-400 uppercase font-bold tracking-widest mt-1 block';
+            document.getElementById('user-display-name').innerText = currentStaffData.name;
+            document.getElementById('user-display-role').innerText = currentStaffData.id;
+            
+            // Get initials for avatar
+            const initials = currentStaffData.name.split(' ').map(n=>n[0]).slice(-2).join('').toUpperCase();
+            document.getElementById('user-avatar-placeholder').innerText = initials;
+            document.getElementById('user-avatar-placeholder').className = 'w-9 h-9 rounded-full bg-cyan-900 border border-cyan-700 flex items-center justify-center text-white font-bold text-xs uppercase shadow-inner';
+            
+            // Populate Staff Data
+            document.getElementById('staff-name-display').innerText = currentStaffData.name;
+            document.getElementById('staff-score-display').innerHTML = `${currentStaffData.score} <span class="text-xs text-slate-500">/10</span>`;
+            document.getElementById('staff-vehicle-text').innerText = currentStaffData.vehicle;
+            document.getElementById('staff-route-text').innerText = currentStaffData.route;
+            document.getElementById('staff-revenue-text').innerText = currentStaffData.revenue;
+            document.getElementById('staff-violations-text').innerText = currentStaffData.violations;
+            
+            // Switch to default tab
+            switchStaffTab('staff-dashboard');
+        }
+    }
+
+    // --- 6. TAB SWITCHING LOGIC ---
+    function switchTab(tabId) {
+        // Hide all admin tabs
+        document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+        // Reset nav buttons
+        document.querySelectorAll('.nav-btn').forEach(btn => {
+            btn.classList.remove('text-brand-400', 'bg-slate-900');
+            const icon = btn.querySelector('i');
+            if(icon) icon.classList.remove('text-brand-500');
+        });
+        
+        // Show target tab
+        const targetTab = document.getElementById(`tab-${tabId}`);
+        if(targetTab) targetTab.classList.remove('hidden');
+        
+        // Active button style
+        const activeBtn = document.getElementById(`nav-${tabId}`);
+        if(activeBtn) {
+            activeBtn.classList.add('text-brand-400', 'bg-slate-900');
+            const icon = activeBtn.querySelector('i');
+            if(icon) icon.classList.add('text-brand-500');
+        }
+        
+        updatePageHeader(tabId, 'admin');
+
+        // Special Initializations based on tab
+        if(tabId === 'gps') {
+            setTimeout(initAdminMap, 100); // Wait for DOM layout
+        }
+    }
+
+    function switchStaffTab(tabId) {
+        // Hide all staff tabs
+        document.querySelectorAll('.tab-content-staff').forEach(el => el.classList.add('hidden'));
+        // Reset nav buttons
+        document.querySelectorAll('.nav-btn-staff').forEach(btn => {
+            btn.classList.remove('text-cyan-400', 'bg-slate-900', 'text-slate-300');
+            btn.classList.add('text-slate-300');
+            const icon = btn.querySelector('i');
+            if(icon) icon.className = icon.className.replace('text-cyan-500', 'text-slate-500').replace('text-amber-500', 'text-slate-500'); // Reset colors roughly
+        });
+        
+        // Show target
+        const targetTab = document.getElementById(`tab-${tabId}`);
+        if(targetTab) targetTab.classList.remove('hidden');
+        
+        // Active button style
+        const activeBtn = document.getElementById(`nav-${tabId}`);
+        if(activeBtn) {
+            activeBtn.classList.remove('text-slate-300');
+            activeBtn.classList.add('text-cyan-400', 'bg-slate-900');
+            const icon = activeBtn.querySelector('i');
+            if(icon && !tabId.includes('report')) icon.classList.add('text-cyan-500');
+            if(icon && tabId.includes('report')) icon.classList.add('text-amber-500');
+        }
+        
+        updatePageHeader(tabId, 'staff');
+
+        if(tabId === 'staff-route') {
+            setTimeout(initStaffMap, 100);
+        }
+    }
+
+    function updatePageHeader(tabId, role) {
+        const titleEl = document.getElementById('page-header-title');
+        const descEl = document.getElementById('page-header-desc');
+        
+        const titles = {
+            'dashboard': { t: 'Tổng quan Dashboard', d: 'Xem báo cáo trực quan và số liệu thống kê vận tải thời gian thực.' },
+            'gps': { t: 'Giám sát Định vị GPS', d: 'Theo dõi trực tiếp tọa độ và trạng thái di chuyển của đội xe.' },
+            'drivers': { t: 'Quản lý Đội Tài xế', d: 'Hồ sơ, phương tiện, và đánh giá hiệu suất của từng nhân sự.' },
+            'rewards': { t: 'Quyết định Thưởng/Phạt', d: 'Quản lý thu nhập, phụ cấp và các vi phạm hành chính.' },
+            'violations': { t: 'Nhật ký Cảnh báo', d: 'Ghi nhận các lỗi tốc độ, dừng đỗ sai quy định tự động.' },
+            'complaints': { t: 'Quản lý Yêu cầu & Khiếu nại', d: 'Tiếp nhận phản hồi và giải quyết sự cố từ tài xế.' },
+            'reports': { t: 'Báo cáo & Xuất file', d: 'Tổng hợp tài chính, chi phí nhiên liệu theo tuần/tháng.' },
+            'settings': { t: 'Cài đặt Hệ thống', d: 'Tùy chỉnh thông số GPS và ngưỡng cảnh báo AI.' },
+            // Staff
+            'staff-dashboard': { t: 'Trang Cá Nhân Tài Xế', d: 'Theo dõi hiệu suất lái xe và thông tin chuyến đi của bạn.' },
+            'staff-route': { t: 'Bản đồ Lịch trình', d: 'Định vị GPS tuyến đường và vị trí hiện tại.' },
+            'staff-history': { t: 'Sổ tay Lịch sử', d: 'Xem lại các khoản thưởng, phạt và đánh giá.' },
+            'staff-report': { t: 'Gửi Yêu Cầu & Báo cáo', d: 'Gửi khiếu nại hoặc báo cáo sự cố về trung tâm.' },
+        };
+        
+        if(titles[tabId]) {
+            titleEl.innerText = titles[tabId].t;
+            descEl.innerText = titles[tabId].d;
+        }
+    }
+
+    // --- 7. POPULATING ADMIN UI DATA ---
+    function populateAdminDriversTable() {
+        const tbody = document.getElementById('drivers-table-body');
+        tbody.innerHTML = '';
+        
+        driversData.forEach(d => {
+            let statusHtml = d.status === 'Online' 
+                ? `<span class="bg-emerald-100 text-emerald-800 text-[10px] px-2 py-0.5 rounded font-bold"><span class="h-1.5 w-1.5 inline-block rounded-full bg-emerald-500 mr-1 animate-pulse"></span>Online</span>`
+                : `<span class="bg-slate-100 text-slate-600 text-[10px] px-2 py-0.5 rounded font-bold"><span class="h-1.5 w-1.5 inline-block rounded-full bg-slate-400 mr-1"></span>Offline</span>`;
+                
+            let scoreColor = d.score >= 9 ? 'text-emerald-600' : (d.score >= 8 ? 'text-brand-600' : 'text-rose-600');
+            
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td class="px-6 py-3">
+                    <div class="font-bold text-slate-900">${d.name}</div>
+                    <div class="text-[10px] text-slate-500 font-mono">${d.id}</div>
+                </td>
+                <td class="px-6 py-3">
+                    <div class="font-semibold text-slate-700">${d.vehicle.split('-')[0]}</div>
+                    <div class="text-[10px] bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200 inline-block mt-0.5 font-mono">${d.vehicle.split('-')[1]}</div>
+                </td>
+                <td class="px-6 py-3 font-mono">${d.phone}</td>
+                <td class="px-6 py-3">${statusHtml}</td>
+                <td class="px-6 py-3 font-semibold ${d.speed > 60 ? 'text-rose-600' : 'text-slate-600'}">${d.speed} km/h</td>
+                <td class="px-6 py-3 font-bold ${scoreColor}">${d.score}</td>
+                <td class="px-6 py-3 text-right">
+                    <button class="text-brand-600 hover:text-brand-800 p-1"><i class="fa-solid fa-pen-to-square"></i></button>
+                    <button class="text-rose-500 hover:text-rose-700 p-1 ml-1"><i class="fa-solid fa-trash-can"></i></button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    function filterDriversTable() {
+        const query = document.getElementById('search-driver-input').value.toLowerCase();
+        const rows = document.getElementById('drivers-table-body').getElementsByTagName('tr');
+        
+        for(let row of rows) {
+            const nameIdText = row.cells[0].innerText.toLowerCase();
+            if(nameIdText.includes(query)) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        }
+    }
+
+    function populateAdminOnlineGrid() {
+        const grid = document.getElementById('dashboard-online-drivers-grid');
+        grid.innerHTML = '';
+        // Pick up to 6 online drivers
+        const onlineDrivers = driversData.filter(d => d.status === 'Online').slice(0, 6);
+        
+        onlineDrivers.forEach(d => {
+            grid.innerHTML += `
+                <div class="p-4 bg-white rounded-xl border border-slate-200 shadow-sm flex items-center justify-between hover:border-brand-300 transition">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-full bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600 gps-pulse-active">
+                            <i class="fa-solid fa-truck"></i>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-slate-900 text-sm leading-tight">${d.name}</h4>
+                            <p class="text-[10px] text-slate-500 font-mono mt-0.5">${d.vehicle}</p>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <span class="text-xs font-bold ${d.speed > 60 ? 'text-rose-500' : 'text-slate-700'} block">${d.speed} km/h</span>
+                        <span class="text-[9px] text-slate-400 block">${d.route.split('->')[1] || 'Đang giao'}</span>
+                    </div>
+                </div>
+            `;
+        });
+    }
+
+    function populateActionDriverSelect() {
+        const select = document.getElementById('action-driver-select');
+        select.innerHTML = '';
+        driversData.forEach(d => {
+            select.innerHTML += `<option value="${d.id}">${d.id} - ${d.name}</option>`;
+        });
+    }
+
+    function populateRewardsTable() {
+        const tbody = document.getElementById('rewards-table-body');
+        tbody.innerHTML = '';
+        actionLogs.forEach(log => {
+            const driver = driversData.find(d => d.id === log.driver) || {name: 'Không rõ'};
+            const typeStyle = log.type === 'Thưởng' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700';
+            const amountColor = log.amount > 0 ? 'text-emerald-600' : 'text-rose-600';
+            const amountSign = log.amount > 0 ? '+' : '';
+            
+            tbody.innerHTML += `
+                <tr>
+                    <td class="px-4 py-3"><span class="font-bold text-slate-900">${driver.name}</span> <span class="text-[10px] text-slate-500 font-mono">(${log.driver})</span></td>
+                    <td class="px-4 py-3"><span class="px-2 py-1 rounded ${typeStyle} font-bold text-[10px]">${log.type}</span></td>
+                    <td class="px-4 py-3 text-slate-600 text-xs">${log.reason} <br><span class="text-[9px] text-slate-400">${log.date}</span></td>
+                    <td class="px-4 py-3 text-right font-bold ${amountColor}">${amountSign}${log.amount.toLocaleString('vi-VN')} đ</td>
+                    <td class="px-4 py-3 text-slate-500 text-xs">GIA AN</td>
+                </tr>
+            `;
+        });
+    }
+
+    function populateViolationsTable() {
+        const tbody = document.getElementById('violations-table-body');
+        tbody.innerHTML = '';
+        violationLogs.forEach(log => {
+            const driver = driversData.find(d => d.id === log.driver) || {name: 'Không rõ'};
+            let badgeClass = 'bg-slate-100 text-slate-700';
+            if(log.level === 'Cao') badgeClass = 'bg-rose-100 text-rose-800 animate-pulse';
+            if(log.level === 'Trung bình') badgeClass = 'bg-amber-100 text-amber-800';
+
+            tbody.innerHTML += `
+                <tr>
+                    <td class="px-6 py-3 font-bold text-slate-900">${driver.name} <span class="text-[10px] font-normal text-slate-500 block font-mono">${log.driver}</span></td>
+                    <td class="px-6 py-3 text-slate-600">${log.time} <span class="text-[10px] block">Hôm nay</span></td>
+                    <td class="px-6 py-3 text-slate-800 font-medium">${log.desc}</td>
+                    <td class="px-6 py-3 text-slate-600"><i class="fa-solid fa-location-dot text-rose-400 mr-1"></i>${log.loc}</td>
+                    <td class="px-6 py-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold ${badgeClass}">${log.level}</span></td>
+                    <td class="px-6 py-3"><button class="bg-slate-900 text-white text-[10px] font-bold px-2 py-1 rounded hover:bg-slate-800">Xử lý</button></td>
+                </tr>
+            `;
+        });
+    }
+
+    function populateComplaintsTable() {
+        const tbody = document.getElementById('complaints-table-body');
+        tbody.innerHTML = '';
+        
+        // Update notification badge on sidebar
+        const pendingCount = complaintsData.filter(c => c.status === 'Chờ xử lý').length;
+        const badge = document.getElementById('complaint-badge');
+        if(badge) {
+            badge.innerText = pendingCount;
+            badge.style.display = pendingCount > 0 ? 'inline-block' : 'none';
+        }
+
+        // Render from newest to oldest
+        complaintsData.slice().reverse().forEach(c => {
+            const statusClass = c.status === 'Chờ xử lý' ? 'bg-amber-100 text-amber-800 border border-amber-200' : 'bg-emerald-100 text-emerald-800 border border-emerald-200';
+            const actionBtn = c.status === 'Chờ xử lý' 
+                ? `<button onclick="resolveComplaint(${c.id})" class="bg-brand-600 hover:bg-brand-700 shadow-md text-white px-3 py-1.5 rounded-lg text-[10px] font-bold transition">Đánh dấu Đã xử lý</button>`
+                : `<span class="text-[10px] text-slate-400 font-bold bg-slate-100 px-3 py-1.5 rounded-lg"><i class="fa-solid fa-check text-emerald-500 mr-1"></i>Hoàn tất</span>`;
+
+            tbody.innerHTML += `
+                <tr class="${c.status === 'Chờ xử lý' ? 'bg-white' : 'bg-slate-50/50'}">
+                    <td class="px-6 py-3">
+                        <div class="font-bold text-slate-900">${c.driverName} <span class="text-[10px] font-normal text-slate-500 font-mono">(${c.driverId})</span></div>
+                        <div class="text-[10px] text-slate-500 mt-0.5 font-medium"><i class="fa-regular fa-clock mr-1 text-slate-400"></i>${c.time}</div>
+                    </td>
+                    <td class="px-6 py-3"><span class="font-semibold text-slate-700 bg-slate-100 px-2.5 py-1 rounded-md text-[11px]">${c.type}</span></td>
+                    <td class="px-6 py-3 max-w-sm"><p class="truncate font-medium text-slate-600" title="${c.desc}">${c.desc}</p></td>
+                    <td class="px-6 py-3"><span class="px-2.5 py-1 rounded-full text-[10px] font-bold ${statusClass}">${c.status}</span></td>
+                    <td class="px-6 py-3 text-right">${actionBtn}</td>
+                </tr>
+            `;
+        });
+    }
+
+    // Expose to window for inline onclick handler
+    window.resolveComplaint = function(id) {
+        const complaint = complaintsData.find(c => c.id === id);
+        if(complaint) {
+            complaint.status = 'Đã xử lý';
+            populateComplaintsTable();
+            showNotification(`Đã đánh dấu khiếu nại của tài xế ${complaint.driverName} là "Đã xử lý"!`, 'success');
+        }
+    };
+
+    // --- 8. CHART.JS INTEGRATION ---
+    function initAdminChart() {
+        if(adminChartInstance) return; // Prevent re-init
+        const ctx = document.getElementById('dashboard-analytics-chart').getContext('2d');
+        adminChartInstance = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: ['Tuần 1', 'Tuần 2', 'Tuần 3', 'Tuần 4', 'Tuần 5 (Hiện tại)'],
+                datasets: [
+                    {
+                        label: 'Doanh thu (Triệu VNĐ)',
+                        data: [320, 350, 310, 410, 480],
+                        borderColor: '#3b82f6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        borderWidth: 3,
+                        tension: 0.4,
+                        fill: true,
+                        yAxisID: 'y'
+                    },
+                    {
+                        label: 'Điểm an toàn trung bình',
+                        data: [8.5, 8.6, 8.4, 8.7, 8.9],
+                        borderColor: '#10b981',
+                        borderDash: [5, 5],
+                        borderWidth: 2,
+                        tension: 0.4,
+                        yAxisID: 'y1'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 10 } } }
+                },
+                scales: {
+                    y: { type: 'linear', display: true, position: 'left', min: 200, title: {display:true, text:'Doanh thu', font:{size:10}} },
+                    y1: { type: 'linear', display: true, position: 'right', min: 5, max: 10, grid: { drawOnChartArea: false }, title:{display:true, text:'Điểm số', font:{size:10}} }
+                }
+            }
+        });
+    }
+
+    // --- 9. LEAFLET MAPS ---
+    function initAdminMap() {
+        if(adminMapInstance) {
+            adminMapInstance.invalidateSize();
+            return;
+        }
+        
+        // Init map centered on HCMC
+        adminMapInstance = L.map('leaflet-map-container').setView([10.762622, 106.660172], 12);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
+        }).addTo(adminMapInstance);
+
+        // Add markers for online drivers
+        driversData.forEach(d => {
+            if(d.status === 'Online') {
+                const color = d.speed > 60 ? '#e11d48' : '#10b981'; // Rose if speeding, Emerald otherwise
+                const pulseClass = d.speed > 60 ? '' : 'animate-pulse';
+                
+                const iconHtml = `
+                    <div class="relative flex items-center justify-center">
+                        <div class="w-8 h-8 rounded-full bg-white shadow-lg border-2 flex items-center justify-center z-10" style="border-color: ${color}">
+                            <i class="fa-solid fa-truck text-[10px]" style="color: ${color}"></i>
+                        </div>
+                        <div class="absolute w-8 h-8 rounded-full opacity-40 ${pulseClass} -z-10" style="background-color: ${color}"></div>
+                        <div class="absolute top-9 bg-slate-900 text-white text-[9px] font-bold px-1.5 py-0.5 rounded whitespace-nowrap shadow-md">${d.id}</div>
+                    </div>
+                `;
+                
+                const customIcon = L.divIcon({
+                    html: iconHtml,
+                    className: 'custom-div-icon',
+                    iconSize: [32, 32],
+                    iconAnchor: [16, 16]
+                });
+
+                L.marker([d.lat, d.lng], {icon: customIcon})
+                 .addTo(adminMapInstance)
+                 .bindPopup(`<b>${d.name} (${d.id})</b><br>Tốc độ: ${d.speed} km/h<br>${d.route}`);
+            }
+        });
+    }
+
+    function recenterAdminMap() {
+        if(adminMapInstance) adminMapInstance.setView([10.762622, 106.660172], 12);
+    }
+
+    function initStaffMap() {
+        if(staffMapInstance) {
+            staffMapInstance.invalidateSize();
+            return;
+        }
+        if(!currentStaffData) return;
+
+        staffMapInstance = L.map('staff-leaflet-map-container').setView([currentStaffData.lat, currentStaffData.lng], 14);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; OpenStreetMap &copy; CARTO'
+        }).addTo(staffMapInstance);
+
+        const iconHtml = `
+            <div class="relative flex items-center justify-center">
+                <div class="w-10 h-10 rounded-full bg-white shadow-lg border-[3px] border-cyan-500 flex items-center justify-center z-10">
+                    <i class="fa-solid fa-truck-fast text-cyan-600 text-sm"></i>
+                </div>
+                <div class="absolute w-12 h-12 rounded-full bg-cyan-400 opacity-40 animate-ping -z-10"></div>
+            </div>
+        `;
+        const customIcon = L.divIcon({ html: iconHtml, className: 'custom-div-icon', iconSize: [40, 40], iconAnchor: [20, 20] });
+        
+        L.marker([currentStaffData.lat, currentStaffData.lng], {icon: customIcon})
+         .addTo(staffMapInstance)
+         .bindPopup('<b>Vị trí hiện tại của bạn</b>')
+         .openPopup();
+    }
+
+    // --- 10. FORM SUBMISSIONS ---
+
+    // Add new driver modal toggling
+    function toggleAddDriverModal(show) {
+        const modal = document.getElementById('add-driver-modal');
+        if(show) modal.classList.remove('hidden');
+        else modal.classList.add('hidden');
+    }
+
+    // Add new driver form submit
+    document.getElementById('add-driver-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        // Just mock the addition visually
+        showNotification('Thêm tài xế mới thành công vào hệ thống!', 'success');
+        toggleAddDriverModal(false);
+        this.reset();
+    });
+
+    // Reward/Fine form submit
+    document.getElementById('reward-fine-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const type = document.querySelector('input[name="action-type"]:checked').value;
+        const driverId = document.getElementById('action-driver-select').value;
+        
+        showNotification(`Đã ghi nhận quyết định ${type} cho tài xế ${driverId}`, 'success');
+        this.reset();
+    });
+
+    // Staff Complaint Form Submit
+    document.getElementById('staff-complaint-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const type = document.getElementById('complaint-type').value;
+        const desc = document.getElementById('complaint-desc').value;
+        const loc = document.getElementById('complaint-location').value;
+        
+        const now = new Date();
+        const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')} ${now.toLocaleDateString('vi-VN')}`;
+
+        // Create new complaint object
+        const newComplaint = {
+            id: Date.now(),
+            driverId: currentStaffData.id,
+            driverName: currentStaffData.name,
+            time: timeStr,
+            type: type,
+            desc: desc + (loc ? ` (Vị trí: ${loc})` : ''),
+            status: 'Chờ xử lý'
+        };
+
+        // Add to global data
+        complaintsData.push(newComplaint);
+        
+        // Update admin table if it was previously rendered
+        populateComplaintsTable(); 
+
+        showNotification('Đã gửi báo cáo / khiếu nại thành công. Quản trị viên GIA AN sẽ phản hồi sớm nhất!', 'success');
+        this.reset();
+    });
+
+    // Utility functions
+    function exportReports(type) {
+        showNotification(`Đang khởi tạo file ${type} báo cáo...`, 'info');
+        setTimeout(() => showNotification(`Tải xuống ${type} thành công!`, 'success'), 1500);
+    }
+    
+    function generateSystemLink() {
+        const tempInput = document.createElement("input");
+        tempInput.value = window.location.href;
+        document.body.appendChild(tempInput);
+        tempInput.select();
+        document.execCommand("copy");
+        document.body.removeChild(tempInput);
+        showNotification('Đã sao chép đường dẫn hệ thống vào Clipboard!', 'success');
+    }
+
+    // Mobile Sidebar Toggle
+    document.getElementById('mobile-sidebar-toggle').addEventListener('click', () => {
+        const sidebar = document.querySelector('aside');
+        sidebar.classList.toggle('hidden');
+        sidebar.classList.toggle('absolute');
+        sidebar.classList.toggle('h-full');
+    });
+
+</script>
+</body>
+</html>
